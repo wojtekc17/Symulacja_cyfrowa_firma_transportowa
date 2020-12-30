@@ -1,0 +1,7 @@
+﻿  main.cpp
+  regionalDepots.cpp
+C:\Users\Wojtek\Desktop\Symulacja_3\Symulacja\Symulacja\regionalDepots.cpp(100,20): warning C4018: "<": niezgodność typu ze znakiem/bez znaku
+C:\Users\Wojtek\Desktop\Symulacja_3\Symulacja\Symulacja\regionalDepots.cpp(116,21): warning C4018: "<": niezgodność typu ze znakiem/bez znaku
+C:\Users\Wojtek\Desktop\Symulacja_3\Symulacja\Symulacja\regionalDepots.cpp(113,6): warning C4101: "idx": lokalna zmienna, do której nie istnieje odwołanie
+  Generowanie kodu...
+  Symulacja.vcxproj -> C:\Users\Wojtek\Desktop\Symulacja_3\Symulacja\Debug\Symulacja.exe
