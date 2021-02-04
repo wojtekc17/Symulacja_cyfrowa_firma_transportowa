@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="event.h" />
     <ClInclude Include="event_list.h" />
+    <ClInclude Include="generators.h" />
     <ClInclude Include="goods.h" />
     <ClInclude Include="headquarters.h" />
     <ClInclude Include="logger.h" />
@@ -33,6 +34,7 @@
   <ItemGroup>
     <ClCompile Include="event.cpp" />
     <ClCompile Include="event_list.cpp" />
+    <ClCompile Include="generators.cpp" />
     <ClCompile Include="goods.cpp" />
     <ClCompile Include="headquarters.cpp" />
     <ClCompile Include="logger.cpp" />

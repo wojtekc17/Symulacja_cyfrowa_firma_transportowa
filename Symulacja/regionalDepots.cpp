@@ -2,7 +2,8 @@
 #include "regionalDepots.h"
 #include "truck.h"
 #include "headquarters.h"
-
+#include <fstream>
+#include <string>
 
 RegionalDepots::RegionalDepots()
 {
@@ -100,6 +101,12 @@ void RegionalDepots::ClearTruck(Process* truck)
 	for (int i = 0; i < truck->pack_list_.size(); i++)
 	{
 		//truck->pack_list_[i]->terminated_ = true;
+		/*
+		ofstream f;
+		f.open(("excel/RD" + std::to_string(truck->idx_) + "_afterUNPACK.csv"), ios::app);
+		f << std::to_string(truck->pack_list_[i]->id_p_) + "," + std::to_string(truck->time()) << endl;
+		f.close();
+		*/
 		delete truck->pack_list_[i];		
 	}	
 	//truck->idx_ = 0;
@@ -110,7 +117,7 @@ void RegionalDepots::ClearTruck(Process* truck)
 
 bool RegionalDepots::AddPackToTrackRD(Process* truck)
 {
-	int idx;
+
 	if (QueueSizePack())
 	{
 		for (int i = 0; i < queue_pack_.size(); i++)
@@ -122,6 +129,17 @@ bool RegionalDepots::AddPackToTrackRD(Process* truck)
 			}
 			if (truck->size_ - queue_pack_[i]->size_ > 0)
 			{
+				/*
+				ofstream f;
+				f.open("excel/RD" + std::to_string(truck->idx_) + "_afterPACKTOTRACK.csv", ios::app);
+				f << std::to_string(queue_pack_[i]->id_p_) + "," + std::to_string(truck->idx_) + "," + std::to_string(truck->time()) << endl;
+				f.close();
+				*/
+				if (truck->tim - queue_pack_[i]->tim >= 0)
+				{
+					time_pack_ += truck->tim - queue_pack_[i]->tim;
+				}
+				cunter_pack_ += 1;
 				truck->pack_list_.push_back(queue_pack_[i]);
 				truck->size_ -= queue_pack_[i]->size_;
 				queue_pack_.erase(queue_pack_.begin() + i);
@@ -135,6 +153,31 @@ bool RegionalDepots::AddPackToTrackRD(Process* truck)
 int RegionalDepots::QueueSizePack() const
 {
 	return static_cast<int>(queue_pack_.size());
+}
+
+void RegionalDepots::AverageQueuePack()
+{
+	average_counter_ += 1;
+	average_queue_ += queue_pack_.size();
+}
+
+void RegionalDepots::PrintAverageQueue()
+{
+	cerr << "\n Avarage pack queue size: " << average_queue_ / average_counter_;
+}
+
+void RegionalDepots::PrintAverageTimePack()
+{
+	cerr << "\n Avarage time pack in queue: " << time_pack_ / cunter_pack_;
+}
+
+void RegionalDepots::ClearStatisticRD()
+{
+	time_pack_ = 0;
+	cunter_pack_ = 0;
+
+	average_counter_ = 0;
+	average_queue_ = 0;
 }
 
 int RegionalDepots::size()

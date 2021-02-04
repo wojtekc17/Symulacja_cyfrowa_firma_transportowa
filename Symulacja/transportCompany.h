@@ -22,9 +22,18 @@ public:
 	RegionalDepots* regionaldepots5_;
 	RegionalDepots* regionaldepots6_;
 
-	void WakeUp(double);
-	int GetIDGoods();
-	void IncIDGoods();
+	void AvarageTimePack(double);
+	void PrintTimeAvarage();
+	void PrintTimeAvaragePercentage(double);
+	void WriteToExcel(double, double, string);
+	void ClearExcel();
+
+	void PrintStatistic(double);
+	void ClearStatistic();
+
+	double avarage_time_truck_ = 0;
+	int avarage_licznik_ = 0;
+
 private:
 	int id_goods_ = 0;	
 	//std::vector<TruckRegionalD*> //vector on regional depots

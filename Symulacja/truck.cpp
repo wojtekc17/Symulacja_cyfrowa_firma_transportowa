@@ -1,26 +1,14 @@
 #include "truck.h"
+#include <fstream>
+#include <string>
 
 
-
-Truck::Truck(Event_list* list, TransportCompany* transportcompany, int id, double size, int phase) : Process(list, id, size, phase)
+Truck::Truck(Event_list* list, TransportCompany* transportcompany, int id, double size, int phase, int id_p) : Process(list, id, size, phase, id_p)
 {
 	transportcompany_ = transportcompany;
 	size_ = size;
 }
 
-double Truck::ExponentialDistributionGenerator(const int average)
-{
-	static default_random_engine generator(kSeed);
-	const exponential_distribution<double> distribution(average);
-	return 1 / distribution(generator);
-}
-
-double Truck::NormalDistributionGenerator(const pair<const int, const int> p)
-{
-	static default_random_engine generator(kSeed);
-	normal_distribution<double> distribution(p.first, p.second);
-	return distribution(generator);
-}
 
 Truck::~Truck()
 {
@@ -28,9 +16,9 @@ Truck::~Truck()
 }
 
 
-
 void Truck::execute(const double new_time)
 {
+	cerr << "\n ********************************************************************************************************";
 	TimeUpdate(new_time);
 	Info();
 	auto active = true;
@@ -52,32 +40,33 @@ void Truck::execute(const double new_time)
 		case 1:
 		{
 			cerr << "\n--> Faza 2: Poczatek obslugi w Platform";
-			transportcompany_->platform_->AddTruckToPlatform(); // dodaje samochód do platformy	
+			transportcompany_->platform_->AddTruckToPlatform(); // dodaje samochód do platformy					
 			if (transportcompany_->platform_->ReturnPackinTrack(this) == 0)
 			{
-				phase_ = 8;
+				this->tim = time();
+				phase_ = 8; // Je¿eli jest pusty Zaladunek
 			}
 			else 
 			{
-				phase_ = 10;
-			}
-			
-
+				phase_ = 10; // Je¿eli jest pe³ny Rozladunek
+			}		
 		}break;
 		case 2:
 		{
-			// DO POPRAWYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY OD TEGO MOMENTU XD
 			cerr << "\n--> Faza 3: Koniec obslugi w platform";
 			transportcompany_->platform_->RemoveTruckFromHQ(this);
+			//transportcompany_->platform_->RemovePendingProcess(this);
 			transportcompany_->platform_->WakeUpQueueForPlatform(transportcompany_->platform_->Free(), time()); // wybudza zdarzenie jeœli jest wolne miejsce								
 			phase_ = 3;
-			//active = false;
 		}
 		break;
 		case 3:
 		{
 			cerr << "\n--> Faza 4: Przejazd ciezarowki";
-			activate(time() + ExponentialDistributionGenerator(20)); // czas przejazdu do RD
+			double timee = Generators::NormalDistributionGenerator(make_pair(20.0, 1.6 * 1.6)); // czas przejazdu do RD ut = 20, ni^2= 1,6^2 
+			transportcompany_->AvarageTimePack(timee);
+			transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
+			activate(time() + timee); 
 			phase_ = 4;
 			active = false;
 		}break;
@@ -137,6 +126,13 @@ void Truck::execute(const double new_time)
 		case 5:
 		{
 			cerr << "\n--> Faza 6: Rozpoczecie obslugi przy regional Depot\n";
+			double timee = 0;
+			for (size_t i = 0; i < this->pack_list_.size(); i++)
+			{
+				timee += this->pack_list_[i]->size_ * 0.7; // size_pack * Tu
+			}
+			transportcompany_->AvarageTimePack(timee);
+			transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
 			if (idx_ == 1)
 			{
 				transportcompany_->regionaldepots1_->AddTruckToRegionalDepot(); // dodanie do regional depot trucka
@@ -168,13 +164,20 @@ void Truck::execute(const double new_time)
 				transportcompany_->regionaldepots6_->ClearTruck(this); // rozladunek
 			}
 			cerr << "\n--> Faza 2.2: Rozladunek\n";
-			activate(time() + ExponentialDistributionGenerator(20));  // czas roz³adunku
+			this->tim = time() + timee;
+			activate(time() + timee);  // czas roz³adunku
 			phase_ = 9;
 			active = false;
 		}break;
 		case 6:
 		{
 			cerr << "\n--> Faza 7: Koniec obslugi w depot";
+			/*
+			ofstream f;
+			f.open("excel/RD_RemoveFromPlatform.csv", ios::app);
+			f << std::to_string(this->id_) + "," + std::to_string(time()) << endl;
+			f.close();
+			*/
 			if (idx_ == 1)
 			{
 				transportcompany_->regionaldepots1_->RemoveTruckFromRegionalDepot(this); // usuniecie trucka z regional depot
@@ -218,46 +221,60 @@ void Truck::execute(const double new_time)
 		case 7:
 		{
 			cerr << "\n--> Faza 8: Powrot ciezarowki do HQ";
-			activate(time() + ExponentialDistributionGenerator(20)); // czas powrotu do HQ
+			double timee = Generators::NormalDistributionGenerator(make_pair(20.0, 1.6 * 1.6)); // czas przejazdu do RD ut = 20, ni^2= 1,6^2 
+			transportcompany_->AvarageTimePack(timee);
+			transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
+			activate(time() + timee);
 			phase_ = 0;
 			active = false;
 		}break;
 		case 8:
 		{
 			cerr << "\n--> Faza 2.1: Zaladunek";
-			cerr << "\nSIZEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE" << transportcompany_->platform_->QueueSizePack(); //sprawdzanie ile paczek jest w kolejce
-			//cerr << "\nSIZE PACK INDEX" << transportcompany_->platform_->ReturnPackIndex();
-			//cerr << "\nSIZE PACK" << transportcompany_->platform_->ReturnPackSize(transportcompany_->platform_->ReturnPackIndex());
-			//transportcompany_->platform_->ReturnPackSize(transportcompany_->platform_->ReturnPackIndex()) > 10;
-
+			//cerr << "\nHQpack -------->" << transportcompany_->platform_->QueueSizePack(); //sprawdzanie ile paczek jest w kolejce
+			
 			if(transportcompany_->platform_->AddPackToTrack(this))
-			{
+			{			
+				transportcompany_->avarage_licznik_ += 1;
+				//transportcompany_->platform_->RemovePendingProcess(this);
+				double timee = 0;				
+				for (size_t i = 0; i < this->pack_list_.size(); i++)
+				{
+					timee += this->pack_list_[i]->size_ * 0.5; // size_pack * Ti
+				}
+				transportcompany_->AvarageTimePack(timee);
+				transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
+				activate(time() + timee);
 				phase_ = 2;
-				activate(time() + ExponentialDistributionGenerator(200));
 			}
 			else
 			{
 				phase_ = 8;
-				activate(time() + ExponentialDistributionGenerator(10));
-			}			
-			//transportcompany_->platform_->PrintLictPack(this);
-			 //chyba czas za³adunku			
+				activate(time() + 5);
+			}					
 			active = false;
 		}break;
 		case 9:
 		{
 			cerr << "\n--> Faza 6.1: Zaladunek";
+			double timee = 0;
 			if (idx_ == 1)
 			{
 				if (transportcompany_->regionaldepots1_->AddPackToTrackRD(this))
 				{
 					phase_ = 6;
-					activate(time() + ExponentialDistributionGenerator(200));
+					for (size_t i = 0; i < this->pack_list_.size(); i++)
+					{
+						timee += this->pack_list_[i]->size_ * 0.5; // size_pack * Ti
+					}
+					transportcompany_->AvarageTimePack(timee);
+					transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
+					activate(time() + timee);
 				}
 				else
 				{
 					phase_ = 9;
-					activate(time() + ExponentialDistributionGenerator(10));
+					activate(time() + 25);
 				}
 			}
 			else if (idx_ == 2)
@@ -265,12 +282,18 @@ void Truck::execute(const double new_time)
 				if (transportcompany_->regionaldepots2_->AddPackToTrackRD(this))
 				{
 					phase_ = 6;
-					activate(time() + ExponentialDistributionGenerator(200));
+					for (size_t i = 0; i < this->pack_list_.size(); i++)
+					{
+						timee += this->pack_list_[i]->size_ * 0.5; // size_pack * Ti
+					}
+					transportcompany_->AvarageTimePack(timee);
+					transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
+					activate(time() + timee);
 				}
 				else
 				{
 					phase_ = 9;
-					activate(time() + ExponentialDistributionGenerator(10));
+					activate(time() + 25);
 				}
 			}
 			else if (idx_ == 3)
@@ -278,12 +301,18 @@ void Truck::execute(const double new_time)
 				if (transportcompany_->regionaldepots3_->AddPackToTrackRD(this))
 				{
 					phase_ = 6;
-					activate(time() + ExponentialDistributionGenerator(200));
+					for (size_t i = 0; i < this->pack_list_.size(); i++)
+					{
+						timee += this->pack_list_[i]->size_ * 0.5; // size_pack * Ti
+					}
+					transportcompany_->AvarageTimePack(timee);
+					transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
+					activate(time() + timee);
 				}
 				else
 				{
 					phase_ = 9;
-					activate(time() + ExponentialDistributionGenerator(10));
+					activate(time() + 25);
 				}
 			}
 			else if (idx_ == 4)
@@ -291,12 +320,18 @@ void Truck::execute(const double new_time)
 				if (transportcompany_->regionaldepots4_->AddPackToTrackRD(this))
 				{
 					phase_ = 6;
-					activate(time() + ExponentialDistributionGenerator(200));
+					for (size_t i = 0; i < this->pack_list_.size(); i++)
+					{
+						timee += this->pack_list_[i]->size_ * 0.5; // size_pack * Ti
+					}
+					transportcompany_->AvarageTimePack(timee);
+					transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
+					activate(time() + timee);
 				}
 				else
 				{
 					phase_ = 9;
-					activate(time() + ExponentialDistributionGenerator(10));
+					activate(time() + 25);
 				}
 			}
 			else if (idx_ == 5)
@@ -304,12 +339,18 @@ void Truck::execute(const double new_time)
 				if (transportcompany_->regionaldepots5_->AddPackToTrackRD(this))
 				{
 					phase_ = 6;
-					activate(time() + ExponentialDistributionGenerator(200));
+					for (size_t i = 0; i < this->pack_list_.size(); i++)
+					{
+						timee += this->pack_list_[i]->size_ * 0.5; // size_pack * Ti
+					}
+					transportcompany_->AvarageTimePack(timee);
+					transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
+					activate(time() + timee);
 				}
 				else
 				{
 					phase_ = 9;
-					activate(time() + ExponentialDistributionGenerator(10));
+					activate(time() + 25);
 				}
 			}
 			else if (idx_ == 6)
@@ -317,26 +358,42 @@ void Truck::execute(const double new_time)
 				if (transportcompany_->regionaldepots6_->AddPackToTrackRD(this))
 				{
 					phase_ = 6;
-					activate(time() + ExponentialDistributionGenerator(200));
+					for (size_t i = 0; i < this->pack_list_.size(); i++)
+					{
+						timee += this->pack_list_[i]->size_ * 0.5; // size_pack * Ti
+					}
+					transportcompany_->AvarageTimePack(timee);
+					transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
+					activate(time() + timee);
 				}
 				else
 				{
 					phase_ = 9;
-					activate(time() + ExponentialDistributionGenerator(10));
+					activate(time() + 25);
 				}
 			}
 			active = false;
 		}break;
 		case 10:
 		{
-			cerr << "\n--> Faza 6.2: Rozladunek";
+			cerr << "\n--> Faza 6.2: Rozladunek";		
+			//transportcompany_->platform_->AddToQueuePendingProces(this);
+			double timee = 0;
+			for (size_t i = 0; i < this->pack_list_.size(); i++)
+			{
+				timee += this->pack_list_[i]->size_ * 0.7; // size_pack * Ti
+			}
+			transportcompany_->AvarageTimePack(timee);
+			transportcompany_->WriteToExcel(time() + timee, transportcompany_->avarage_time_truck_, "excel/AvarageTimeTrack.csv");
 			transportcompany_->platform_->ClearTruckHQ(this);
-			activate(time() + ExponentialDistributionGenerator(200)); //czas rozladunku HQ
+			activate(time() + timee);
+			this->tim = time() + timee;
 			phase_ = 8;
 			active = false;
 		}break;
 		}
 	}
+	
 	transportcompany_->platform_->PlatformInfo(); //info aktualne o platformie
 	transportcompany_->regionaldepots1_->RegionalInfo(); // info aktualne o regional depot
 	transportcompany_->regionaldepots2_->RegionalInfo();

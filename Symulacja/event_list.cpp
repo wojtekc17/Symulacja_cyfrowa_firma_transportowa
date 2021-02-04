@@ -22,7 +22,6 @@ void Event_list::AddNewEvent(Event* add_event)
         last_ = add_event;
     }
     else {
-
         Event* search = first_;
         while (search->event_time_ <= add_event->event_time_)
         {
